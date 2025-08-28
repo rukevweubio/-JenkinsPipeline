@@ -5,7 +5,6 @@ pipeline {
         DOCKER_IMAGE = "rukevweubio/my-grandel-app"
         DOCKER_TAG   = "latest"
         SONAR_HOST   = "https://potential-space-couscous-7v4rprpggq5c4-9000.app.github.dev"
-        SONAR_TOKEN  = credentials('sonarqube-token')
         GIT_REPO     = "https://github.com/rukevweubio/JenkinsPipeline.git"
     }
 
@@ -13,8 +12,6 @@ pipeline {
 
         stage('Checkout') {
             steps {
-                // echo "Cloning repository ${GIT_REPO}"
-                // git url: "${GIT_REPO}", branch: 'main'
                 checkout scm
             }
         }
@@ -45,10 +42,10 @@ pipeline {
                 stage('GitLeaks Scan') {
                     steps {
                         echo "Scanning repository for secrets using GitLeaks"
-                         sh "docker run --rm -v \$(pwd):/repo zricethezav/gitleaks:latest detect \
-                        --source=/repo \
-                        --report-format=json \
-                        --report-path=/repo/gitleaks-report.json"
+                        sh """docker run --rm -v \$(pwd):/repo zricethezav/gitleaks:latest detect \
+                            --source=/repo \
+                            --report-format=json \
+                            --report-path=/repo/gitleaks-report.json"""
                     }
                 }
             }
@@ -57,7 +54,12 @@ pipeline {
         stage('SonarQube Analysis') {
             steps {
                 echo "Running SonarQube analysis"
-                sh "./gradlew sonarqube -Dsonar.host.url=${SONAR_HOST} -Dsonar.login=${SONAR_TOKEN}"
+                withCredentials([string(credentialsId: 'sonarqube-token', variable: 'SONAR_TOKEN')]) {
+                    sh """./gradlew build sonar \
+                        -Dsonar.host.url=${SONAR_HOST} \
+                        -Dsonar.login=\$SONAR_TOKEN \
+                        -Dsonar.gradle.skipCompile=true"""
+                }
             }
         }
 
