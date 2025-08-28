@@ -4,8 +4,8 @@ pipeline {
     environment {
         DOCKER_IMAGE = "rukevweubio/my-grandel-app"
         DOCKER_TAG   = "latest"
-        SONAR_HOST   = "https://potential-space-couscous-7v4rprpggq5c4-9000.app.github.dev"
-        GIT_REPO     = "https://github.com/rukevweubio/JenkinsPipeline.git"
+        SONAR_HOST   = "https://potential-space-couscous-7v4rprpggq5c4-9000.app.github.dev"  // REPLACE WITH STABLE URL!
+        GIT_REPO     = "https://github.com/rukevweubio/JenkinsPipeline.git"  // Unused; consider removing
     }
 
     stages {
@@ -51,14 +51,23 @@ pipeline {
             }
         }
 
+        stage('Test Sonar Connectivity') {  // New diagnostic stage
+            steps {
+                echo "Testing connection to SonarQube"
+                sh "curl -v ${SONAR_HOST}/api/server/version || echo 'Connection failed!'"
+            }
+        }
+
         stage('SonarQube Analysis') {
             steps {
                 echo "Running SonarQube analysis"
                 withCredentials([string(credentialsId: 'sonarqube-token', variable: 'SONAR_TOKEN')]) {
-                    sh """./gradlew build sonar \
+                    sh """./gradlew sonar \
                         -Dsonar.host.url=${SONAR_HOST} \
-                        -Dsonar.login=\$SONAR_TOKEN \
-                        -Dsonar.gradle.skipCompile=true"""
+                        -Dsonar.token=\$SONAR_TOKEN \
+                        -Dsonar.projectKey=JenkinsPipeline \  // Change to your actual key
+                        -Dsonar.gradle.skipCompile=true \
+                        --stacktrace --debug"""  // Remove --stacktrace --debug after debugging
                 }
             }
         }
