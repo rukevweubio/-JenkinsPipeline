@@ -70,18 +70,18 @@ pipeline {
                 echo "Running SonarQube code quality analysis"
                 // Securely inject token (no Groovy interpolation)
                 withCredentials([string(credentialsId: 'sonarqube-token', variable: 'SONAR_TOKEN')]) {
-                    sh '''
-                        ./gradlew sonar \
-                          -Dsonar.host.url=${SONAR_HOST} \
-                          -Dsonar.login=${SONAR_TOKEN} \
-                          -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
-                          -Dsonar.projectName="${SONAR_PROJECT_NAME}" \
-                          -Dsonar.projectVersion=1.0 \
-                          -Dsonar.sources=src/main/java \
-                          -Dsonar.tests=src/test/java \
-                          -Dsonar.sourceEncoding=UTF-8 \
-                          -Dsonar.gradle.skipCompile=true
-                    '''
+                   sh '''
+                ./gradlew sonar \
+                  -Dsonar.host.url=http://localhost:9000 \
+                  -Dsonar.login=$SONAR_TOKEN \
+                  -Dsonar.projectKey=JenkinsPipeline \
+                  -Dsonar.projectName="Jenkins Pipeline App" \
+                  -Dsonar.projectVersion=1.0 \
+                  -Dsonar.sources=my-docker-apps/src/main/java \
+                  -Dsonar.tests=my-docker-apps/src/test/java \
+                  -Dsonar.sourceEncoding=UTF-8 \
+                  -Dsonar.gradle.skipCompile=true
+            '''
                 }
             }
         }

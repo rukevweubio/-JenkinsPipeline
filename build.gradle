@@ -5,11 +5,9 @@ plugins {
     id 'org.sonarqube' version '4.4.1.3373'
 }
 
-// Project metadata
 group = 'com.example.demo'
 version = '1.0.0'
 
-// Java 17 configuration
 java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(17)
@@ -18,47 +16,45 @@ java {
     targetCompatibility = '17'
 }
 
-// Repository
+// 🔧 POINT TO ACTUAL SOURCE LOCATIONS
+sourceSets {
+    main {
+        java {
+            srcDirs = ['my-docker-apps/src/main/java']
+        }
+        resources {
+            srcDirs = ['my-docker-apps/src/main/resources']
+        }
+    }
+    test {
+        java {
+            srcDirs = ['my-docker-apps/src/test/java']
+        }
+        resources {
+            srcDirs = ['my-docker-apps/src/test/resources']
+        }
+    }
+}
+
 repositories {
     mavenCentral()
 }
 
-// Dependencies
 dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
 }
 
-// Configure test task
 tasks.named('test') {
     useJUnitPlatform()
 }
 
-// Disable standard JAR
 jar {
     enabled = false
-    archiveClassifier = ''
 }
 
-// Boot JAR settings
 bootJar {
     archiveFileName = 'app.jar'
     mainClass = 'com.example.demo.DemoApplication'
-}
-
-// SonarQube configuration
-sonarqube {
-    properties {
-        // Must match Jenkins pipeline: SONAR_PROJECT_KEY = "JenkinsPipeline"
-        property "sonar.projectKey", "JenkinsPipeline"
-
-        // Recommended: Set source encoding
-        property "sonar.sourceEncoding", "UTF-8"
-
-        // REMOVED: sonar.java.source is DEPRECATED and ignored
-        // property "sonar.java.source", "17"
-        
-        // TIP: Do NOT set sonar.host.url here — let Jenkins control it via -Dsonar.host.url
-    }
 }
