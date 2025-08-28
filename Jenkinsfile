@@ -45,7 +45,10 @@ pipeline {
                 stage('GitLeaks Scan') {
                     steps {
                         echo "Scanning repository for secrets using GitLeaks"
-                        sh "docker run --rm -v \$(pwd):/repo zricethezav/gitleaks:latest gitleaks detect --source=/repo --report-format=json --report-path=/repo/gitleaks-report.json"
+                         sh "docker run --rm -v \$(pwd):/repo zricethezav/gitleaks:latest detect \
+                        --source=/repo \
+                        --report-format=json \
+                        --report-path=/repo/gitleaks-report.json"
                     }
                 }
             }
