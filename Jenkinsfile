@@ -22,7 +22,7 @@ pipeline {
         stage('Build') {
             steps {
                 echo "Building application with Gradle"
-                sh "./gradlew clean build"
+                sh "cd my-docker-apps && ./gradlew clean build"
             }
         }
 
