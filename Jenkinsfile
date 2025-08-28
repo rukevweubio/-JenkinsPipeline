@@ -1,4 +1,3 @@
-
 pipeline {
     agent any
 
@@ -6,13 +5,17 @@ pipeline {
         DOCKER_IMAGE = "rukevweubio/my-grandel-app"
         DOCKER_TAG   = "latest"
         SONAR_HOST   = "https://potential-space-couscous-7v4rprpggq5c4-9000.app.github.dev"
-        SONAR_TOKEN  = credentials('sonar-token') 
+        SONAR_TOKEN  = credentials('sonarqube-token')  // your SonarQube token stored in Jenkins
+		GIT_REPO     = "https://github.com/rukevweubio/JenkinsPipeline.git"
     }
 
-    stages {
+     stages {
         stage('Checkout') {
             steps {
-                checkout scm
+                script {
+                    echo "Cloning repository ${GIT_REPO}"
+                    git url: "${GIT_REPO}", branch: 'main'
+                }
             }
         }
 
