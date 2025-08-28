@@ -1,34 +1,30 @@
-# Multi-stage build
-FROM gradle:8.5-jdk17 AS build
 
-# Set working directory
+
+
+# ---- Build stage ----
+FROM gradle:8.9-jdk17-alpine AS build
 WORKDIR /app
 
-# Copy Gradle files
-COPY build.gradle settings.gradle ./
-COPY gradle gradle
+# Copy Gradle wrapper and build files
+COPY build.gradle settings.gradle gradlew ./
+COPY gradle ./gradle
 
 # Copy source code
-COPY src src
+COPY my-docker-apps/src ./src
 
-# Build the application
-RUN gradle bootJar --no-daemon
+# Build the Spring Boot fat jar
+RUN ./gradlew clean bootJar --no-daemon
 
-# Runtime stage
-FROM openjdk:17-jre-slim
-
-# Set working directory
+# ---- Runtime stage ----
+FROM eclipse-temurin:17-jre-jammy
 WORKDIR /app
 
-# Copy JAR from build stage
-COPY --from=build /app/build/libs/app.jar app.jar
+# Copy the built jar from the build stage
+COPY --from=build /app/build/libs/*.jar app.jar
 
-# Expose port
+# Expose the default Spring Boot port
 EXPOSE 8080
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8080/api/health || exit 1
 
 # Run the application
 ENTRYPOINT ["java", "-jar", "app.jar"]
+
