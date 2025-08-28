@@ -4,28 +4,31 @@ pipeline {
     environment {
         DOCKER_IMAGE = "rukevweubio/my-grandel-app"
         DOCKER_TAG   = "latest"
-        SONAR_HOST   = "https://potential-space-couscous-7v4rprpggq5c4-9000.app.github.dev"  // REPLACE WITH STABLE URL!
-        GIT_REPO     = "https://github.com/rukevweubio/JenkinsPipeline.git"  // Unused; consider removing
+       
+        SONAR_HOST   = "http://localhost:9000"
+        SONAR_PROJECT_KEY = "JenkinsPipeline"
+        SONAR_PROJECT_NAME = "Jenkins Pipeline App"
     }
 
     stages {
 
         stage('Checkout') {
             steps {
+                echo "Checking out source code"
                 checkout scm
             }
         }
 
         stage('Build') {
             steps {
-                echo "Building the app with Gradle"
+                echo "Building application with Gradle"
                 sh "./gradlew clean build"
             }
         }
 
         stage('Docker Build & Tag') {
             steps {
-                echo "Building and tagging Docker image"
+                echo "Building Docker image"
                 sh "docker build -t ${DOCKER_IMAGE}:${DOCKER_TAG} ."
             }
         }
@@ -34,47 +37,58 @@ pipeline {
             parallel {
                 stage('Trivy Scan') {
                     steps {
-                        echo "Scanning Docker image for vulnerabilities with Trivy"
+                        echo "Scanning image for vulnerabilities"
                         sh "docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy image ${DOCKER_IMAGE}:${DOCKER_TAG}"
                     }
                 }
-
                 stage('GitLeaks Scan') {
                     steps {
-                        echo "Scanning repository for secrets using GitLeaks"
-                        sh """docker run --rm -v \$(pwd):/repo zricethezav/gitleaks:latest detect \
+                        echo "Scanning for secrets in repo"
+                        sh '''docker run --rm -v "$(pwd)":/repo zricethezav/gitleaks:latest detect \
                             --source=/repo \
                             --report-format=json \
-                            --report-path=/repo/gitleaks-report.json"""
+                            --report-path=/repo/gitleaks-report.json'''
                     }
                 }
             }
         }
 
-        stage('Test Sonar Connectivity') {  // New diagnostic stage
+        stage('Test SonarQube Connectivity') {
             steps {
-                echo "Testing connection to SonarQube"
-                sh "curl -v ${SONAR_HOST}/api/server/version || echo 'Connection failed!'"
+                echo "Testing connection to SonarQube at ${SONAR_HOST}"
+                sh '''
+                    set +x
+                    curl -f --connect-timeout 10 "${SONAR_HOST}/api/system/status" \
+                        && echo "SonarQube is UP and reachable" \
+                        || (echo "Failed to connect to SonarQube"; exit 1)
+                '''
             }
         }
 
         stage('SonarQube Analysis') {
             steps {
-                echo "Running SonarQube analysis"
+                echo "Running SonarQube code quality analysis"
+                // Securely inject token (no Groovy interpolation)
                 withCredentials([string(credentialsId: 'sonarqube-token', variable: 'SONAR_TOKEN')]) {
-                    sh """./gradlew sonar \
-                        -Dsonar.host.url=${SONAR_HOST} \
-                        -Dsonar.token=\$SONAR_TOKEN \
-                        -Dsonar.projectKey=JenkinsPipeline \  // Change to your actual key
-                        -Dsonar.gradle.skipCompile=true \
-                        --stacktrace --debug"""  // Remove --stacktrace --debug after debugging
+                    sh '''
+                        ./gradlew sonar \
+                          -Dsonar.host.url=${SONAR_HOST} \
+                          -Dsonar.login=${SONAR_TOKEN} \
+                          -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
+                          -Dsonar.projectName="${SONAR_PROJECT_NAME}" \
+                          -Dsonar.projectVersion=1.0 \
+                          -Dsonar.sources=src/main/java \
+                          -Dsonar.tests=src/test/java \
+                          -Dsonar.sourceEncoding=UTF-8 \
+                          -Dsonar.gradle.skipCompile=true
+                    '''
                 }
             }
         }
 
         stage('Push to Docker Hub') {
             steps {
-                echo "Logging in to Docker Hub and pushing image"
+                echo "Pushing Docker image to Docker Hub"
                 withCredentials([usernamePassword(credentialsId: 'docker-hub-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
                     sh "echo \$DOCKER_PASS | docker login -u \$DOCKER_USER --password-stdin"
                     sh "docker push ${DOCKER_IMAGE}:${DOCKER_TAG}"
@@ -84,10 +98,18 @@ pipeline {
 
         stage('Run Docker Image') {
             steps {
-                echo "Running Docker image"
+                echo "Running container on port 8082"
                 sh "docker run -d -p 8082:8080 ${DOCKER_IMAGE}:${DOCKER_TAG}"
             }
         }
+    }
 
+    post {
+        success {
+            echo "Pipeline completed successfully!"
+        }
+        failure {
+            echo "Pipeline failed. Check logs for details."
+        }
     }
 }
