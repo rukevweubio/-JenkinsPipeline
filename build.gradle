@@ -2,7 +2,7 @@ plugins {
     id 'java'
     id 'org.springframework.boot' version '3.2.0'
     id 'io.spring.dependency-management' version '1.1.4'
-    id 'org.sonarqube' version '4.4.1.3373'
+    id 'org.sonarqube' version '6.2.0.5505'  // ✅ Updated to latest
 }
 
 group = 'com.example.demo'
@@ -16,7 +16,7 @@ java {
     targetCompatibility = '17'
 }
 
-// 🔧 POINT TO ACTUAL SOURCE LOCATIONS
+// 🔧 Custom source directories
 sourceSets {
     main {
         java {
@@ -57,4 +57,26 @@ jar {
 bootJar {
     archiveFileName = 'app.jar'
     mainClass = 'com.example.demo.DemoApplication'
+}
+
+// ✅ SonarQube Configuration — All in one place
+sonarqube {
+    properties {
+        // SonarQube project settings
+        property "sonar.projectKey", "JenkinsPipeline"
+        property "sonar.projectName", "JenkinsPipeline"
+        property "sonar.host.url","http://13.217.46.188:9000"
+
+        // Source & test locations
+        property "sonar.sources", "my-docker-apps/src/main/java"
+        property "sonar.tests", "my-docker-apps/src/test/java"
+        property "sonar.sourceEncoding", "UTF-8"
+
+        // Required: compiled class files
+        property "sonar.java.binaries", "build/classes/java/main"
+        property "sonar.java.test.binaries", "build/classes/java/test"
+
+        // Optional: include JARs/libraries
+        property "sonar.java.libraries", "build/libs/*.jar"
+    }
 }
